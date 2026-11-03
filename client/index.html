@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Upcoming Events - Club Events</title>
+  <style>
+    body { font-family: sans-serif; max-width: 800px; margin: 30px auto; padding: 20px; }
+    header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ccc; padding-bottom: 10px; margin-bottom: 20px; }
+    .event-card { border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 5px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Upcoming Events</h1>
+    <div>
+      <span id="user-name">Loading...</span>
+      <button id="signout-btn" style="margin-left: 10px; padding: 5px 10px;">Sign Out</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="events-list">Loading events...</div>
+  </main>
+
+  <script>
+    async function checkAuthAndLoadEvents() {
+      try {
+        const authRes = await fetch('/api/auth/me');
+        if (!authRes.ok) {
+          window.location.href = '/signin.html';
+          return;
+        }
+        const authData = await authRes.json();
+        document.getElementById('user-name').textContent = authData.user.name;
+
+        const eventsRes = await fetch('/api/events');
+        if (eventsRes.ok) {
+          const eventsData = await eventsRes.json();
+          const listDiv = document.getElementById('events-list');
+          if (eventsData.events.length === 0) {
+            listDiv.textContent = 'No upcoming events.';
+            return;
+          }
+          listDiv.innerHTML = eventsData.events.map(event => `
+            <div class="event-card">
+              <h3>${escapeHtml(event.title)}</h3>
+              <p>Date: ${new Date(event.date).toLocaleString()}</p>
+              <p>Total Places: ${event.places}</p>
+            </div>
+          `).join('');
+        }
+      } catch (err) {
+        window.location.href = '/signin.html';
+      }
+    }
+
+    document.getElementById('signout-btn').addEventListener('click', async () => {
+      await fetch('/api/auth/signout', { method: 'POST' });
+      window.location.href = '/signin.html';
+    });
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    checkAuthAndLoadEvents();
+  </script>
+</body>
+</html>

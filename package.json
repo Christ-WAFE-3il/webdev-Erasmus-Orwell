@@ -1,5 +1,6 @@
 {
   "name": "webdev-erasmus-orwell",
+  "type": "module",
   "version": "1.0.0",
   "description": "This repository is your workspace for the whole course: Exercise 1 in `mcp-server/`, and your project (Exercises 2–5) in the rest of it. Everything runs in your browser through GitHub Codespaces, so nothing needs to be installed on your laptop.",
   "main": "index.js",
@@ -7,7 +8,8 @@
     "doc": "docs"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --test server/slice1.test.js",
+    "start": "node server/index.js",
     "mcp": "node mcp-server/server.js"
   },
   "repository": {
@@ -20,5 +22,11 @@
   "bugs": {
     "url": "https://github.com/Christ-WAFE-3il/webdev-Erasmus-Orwell/issues"
   },
-  "homepage": "https://github.com/Christ-WAFE-3il/webdev-Erasmus-Orwell#readme"
+  "homepage": "https://github.com/Christ-WAFE-3il/webdev-Erasmus-Orwell#readme",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "better-sqlite3": "^13.0.3",
+    "express": "^5.3.0",
+    "express-session": "^1.19.0"
+  }
 }

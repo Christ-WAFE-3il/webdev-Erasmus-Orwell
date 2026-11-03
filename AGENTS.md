@@ -5,18 +5,20 @@ Read this file at the start of every session. Keep it short and correct; update 
 ## Project
 <!-- One or two sentences: what the app does and for whom. Link SPEC.md. -->
 See `SPEC.md` for goals, non-goals and acceptance criteria.
+A web app where student clubs publish events with a limited number of places, and members browse, sign up and cancel.
 
 ## Commands
 <!-- How to install, run, test. Keep these exact and working. -->
 - Install: npm install
-- Run:
-- Test: node mcp-server/check.mjs -- npm run --silent mcp
+- Run: npm start
+- Test: npm test
 - Coverage:
 - MCP server: npm run --silent mcp
 
 ## Conventions
 <!-- Folder layout, naming, where business rules live, how errors are returned to the client. -->
-
+- Server code lives in `server/`, React pages in `client/`.
+- Business rules (places left, no double sign-up, who can edit) live in the service layer, in `server/services/`.
 ## Layers
 <!-- Fill in the file or folder for each layer. -->
 Requests arrive two ways and both end in the same place:
