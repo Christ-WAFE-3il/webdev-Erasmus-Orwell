@@ -10,5 +10,6 @@ One row per agent session. In Gemini CLI, type `/stats` before you quit and copy
 | 2026-10-26 | Gemini CLI (review of Goals and Constraints, quota reached) | 14 265 | 71 | | |
 | 2026-10-26 | Gemini CLI, gemini-3-flash-preview (AGENTS.md reading test) | 12 706 | 127 | | |
 |2026-11-03| Gemini CLI, gemini-3.5-flash-lite (plan and build of slice 1)	|2 210 559 | 21 276
+| 2026-11-10 | Gemini CLI, gemini-3-flash-preview (questions on failure cases, slice 2) | 41 353 | 933 | | $0.03 |
 
 List-price cost uses the Gemini API published pricing (paid tier, per 1M tokens): gemini-3.8-flash $0.75 in / $3.75 out (introductory price until 2026-12-31), gemini-3-flash-preview $0.50 in / $3.00 out. All tokens of a row are priced at the main model's rate; cached reads are not discounted.

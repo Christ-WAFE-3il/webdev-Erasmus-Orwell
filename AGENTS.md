@@ -12,6 +12,7 @@ A web app where student clubs publish events with a limited number of places, an
 - Install: npm install
 - Run: npm start
 - Test: npm test
+- Migrate: npm run migrate
 - Coverage:
 - MCP server: npm run --silent mcp
 
@@ -60,6 +61,12 @@ that talks to the database directly is a second, unguarded way into your data: n
 - adding, renaming or removing an MCP tool
 - changing a coverage threshold
 - sending user data to a third-party model
+- deleting or resetting the database file (`server/database.sqlite`)
+- changing a status code of the sign-up feature (201, 401, 403, 404, 409, 422)
+- changing how free places are calculated (it must stay places minus registrations, never a stored column)
+- allowing a sign-up or a cancellation for a past event
+- weakening the rule against signing up twice (the unique constraint or its check)
+- writing to the registrations table anywhere except the sign-up service
 
 ## Never
 - commit secrets, passwords, API keys or an OAuth client secret

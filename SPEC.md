@@ -67,11 +67,24 @@ React for the pages, Express and SQLite on the server, plain CSS. Screens: sign 
 - [AC-8] A member who is not the organizer opens the edit page of an event and sees "Not allowed" instead of the form.
 
 
-### Slice 1: sign-in and <list screen>
+### Slice 1: sign-in and the upcoming events list
 - [AC-9] A visitor who is not signed in opens the events page and is sent to the sign-in page.
 - [AC-10] A user enters a valid email and password and sees the upcoming events list with their name in the header.
 - [AC-11] A user enters a wrong password and sees "Wrong email or password" and stays on the sign-in page.
 - [AC-12] An event row deleted from the database no longer appears in the events list after a reload.
+
+### Slice 2: sign up for an event
+- [AC-13] A signed-in member signs up for an event with free places and gets 201; one row appears in registrations and the free places go down by one.
+- [AC-14] Signing up for a full event is refused with 409 and "This event is full"; no row is added.
+- [AC-15] Signing up twice for the same event is refused with 409; the member still has one row.
+- [AC-16] A sign-up request without a session is refused with 401.
+- [AC-17] A member cancels their own sign-up and gets 204; the row is removed and the place is free again.
+- [AC-18] A member who cancels another member's sign-up gets 403; the row stays.
+- [AC-19] A sign-up request for an event id that does not exist (for example an event deleted a moment ago) gets 404; no row is added to registrations.
+- [AC-20] A sign-up request for an event whose date has passed gets 409 and "This event has already happened"; no row is added.
+- [AC-21] A member who cancels a sign-up they never made gets 404; the registrations table is unchanged.
+- [AC-22] A sign-up request with a missing or non-numeric event id gets 422; no row is added.
+
 ## Traceability
 <!-- Filled in from Exercise 3 onward: each AC id, and the test that names it. -->
 | Criterion | Test |
@@ -79,7 +92,16 @@ React for the pages, Express and SQLite on the server, plain CSS. Screens: sign 
 | AC-9 | server/slice1.test.js |
 | AC-10 | server/slice1.test.js |
 | AC-11 | server/slice1.test.js |
-
+| AC-13 | |
+| AC-14 | |
+| AC-15 | |
+| AC-16 | |
+| AC-17 | |
+| AC-18 | |
+| AC-19 | |
+| AC-20 | |
+| AC-21 | |
+| AC-22 | |
 ## Spec vs result
 <!-- After the agent builds the slice: which criteria passed, which it missed or reinterpreted, and what you changed in this spec because of it. -->
 

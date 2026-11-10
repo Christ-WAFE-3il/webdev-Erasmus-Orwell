@@ -40,9 +40,9 @@ One entry per agent session, newest at the bottom. Be honest: what went wrong is
 
 
 
-## 2026-11-03 · Build slice 1 (sign-in and events list)
-- Goal: build slice 1 of the Club Events app from SPEC.md: database, sign-in, and the upcoming events list.
-- Delegated: planning, then building in three steps (SQLite tables with seed rows, sign-in with sessions, list screen), stopping after each step.
-- Checkpoints: I read the plan before any code. After step 1 I opened the database. After step 2 I tested with curl: 401 when not signed in, 401 on a wrong password, 200 with the right one. After step 3 I signed in in the browser, deleted an event row in the database and checked that it disappeared after a reload.
-- Went wrong: the plan stored free_places in events and talked about a connection pool, so I asked for total places only and a SQLite file. The agent also added a verify-step1.js file I had not asked for. gemini-3.8-flash was out of quota, so a smaller model did the build.
-- Changed by hand: nothing.
+## 2026-11-10 · Exercise 3 plan (sign up for an event)
+- Goal: a written plan for the sign-up feature (slice 2), no code yet.
+- Autonomy: the agent works alone inside one step of the plan; I read the diff before every commit.
+- Checkpoints: plan review before any code; npm test green before each commit; a permission prompt for everything in "Always ask before"; I stop it if it touches migrations that already ran, authentication rules or dependencies.
+- Went wrong: (to fill in after the session)
+- Changed by hand: (to fill in after the session)
