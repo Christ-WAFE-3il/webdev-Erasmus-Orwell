@@ -8,7 +8,7 @@
     "doc": "docs"
   },
   "scripts": {
-    "test": "NODE_ENV=test node --test server/slice1.test.js server/slice2.test.js",
+    "test": "NODE_ENV=test node --test server/slice1.test.js server/slice2.test.js server/slice3.test.js",
     "start": "node server/index.js",
     "mcp": "node mcp-server/server.js",
     "migrate": "node server/migrate.js"
