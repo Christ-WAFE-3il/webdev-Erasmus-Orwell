@@ -44,5 +44,14 @@ One entry per agent session, newest at the bottom. Be honest: what went wrong is
 - Goal: a written plan for the sign-up feature (slice 2), no code yet.
 - Autonomy: the agent works alone inside one step of the plan; I read the diff before every commit.
 - Checkpoints: plan review before any code; npm test green before each commit; a permission prompt for everything in "Always ask before"; I stop it if it touches migrations that already ran, authentication rules or dependencies.
-- Went wrong: (to fill in after the session)
-- Changed by hand: (to fill in after the session)
+- Went wrong: in the always-ask test I answered Yes to "Install the package dayjs" by mistake, so it was installed; I removed it with npm uninstall dayjs. The first plan also had flaws (see below).
+- Changed by hand: nothing in the code, I only corrected the plan through prompts.
+
+Plan
+1. migrations/002_registrations.sql and `npm run migrate`, which records the files already applied
+2. server/services/eventService.js: signUpForEvent (one transaction: event exists, not past, not already registered, free places left) and cancelRegistration; named errors; tests first
+3. Routes: POST /api/events/:id/registrations (201, 401, 404, 409, 422), DELETE /api/registrations/:id (204, 401, 403, 404, 422), GET /api/events with free places and my registration id
+4. Authorization: 401 before the service is called, 403 NotOwner raised by the service; API tests
+5. UI: loading, empty and error states; Sign up, Cancel and Full
+
+Changed in review: the first plan used DELETE /api/events/:id/sign-up, so the 403 could never happen; I moved to DELETE /api/registrations/:id. I asked for a real migration file instead of editing db.js, named errors in the service instead of HTTP codes, a transaction for the free-places check, and tests before code. In the second review I asked for one migration runner, the registration id in the events list, and tests per step instead of failing stubs.
