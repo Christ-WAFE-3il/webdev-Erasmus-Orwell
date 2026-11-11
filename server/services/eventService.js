@@ -21,9 +21,17 @@ export class ForbiddenError extends Error {
   }
 }
 
-export function getUpcomingEvents() {
+export function getUpcomingEvents(userId) {
   const now = new Date().toISOString();
-  const events = db.prepare('SELECT id, title, date, places FROM events WHERE date >= ? ORDER BY date ASC').all(now);
+  const events = db.prepare(`
+    SELECT 
+      e.id, e.title, e.date, e.places,
+      (e.places - (SELECT COUNT(*) FROM registrations WHERE event_id = e.id)) as free_places,
+      (SELECT id FROM registrations WHERE event_id = e.id AND user_id = ?) as registration_id
+    FROM events e
+    WHERE e.date >= ?
+    ORDER BY e.date ASC
+  `).all(userId, now);
   return events;
 }
 
@@ -75,6 +83,24 @@ export function cancelRegistration(userId, eventId) {
 
   const transaction = db.transaction(() => {
     db.prepare('DELETE FROM registrations WHERE user_id = ? AND event_id = ?').run(userId, eventId);
+  });
+
+  transaction();
+  return { success: true };
+}
+
+export function cancelRegistrationById(userId, registrationId) {
+  const reg = db.prepare('SELECT * FROM registrations WHERE id = ?').get(registrationId);
+  if (!reg) {
+    throw new NotFoundError('Registration not found');
+  }
+
+  if (reg.user_id !== userId) {
+    throw new ForbiddenError('Cannot cancel another member\'s registration');
+  }
+
+  const transaction = db.transaction(() => {
+    db.prepare('DELETE FROM registrations WHERE id = ?').run(registrationId);
   });
 
   transaction();

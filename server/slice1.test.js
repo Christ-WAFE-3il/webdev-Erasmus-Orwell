@@ -2,9 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert';
 import { authenticateUser } from './services/authService.js';
 import { getUpcomingEvents } from './services/eventService.js';
-import { initDb } from './db.js';
+import { runMigrations } from './migrate.js';
 
-initDb();
+runMigrations();
 
 test('AC-10: user enters valid email and password and authenticates successfully', () => {
   const result = authenticateUser('student@club.com', 'password123');
@@ -19,7 +19,7 @@ test('AC-11: user enters wrong password and receives wrong email or password err
 });
 
 test('AC-9 & AC-3: upcoming events can be retrieved ordered by date', () => {
-  const events = getUpcomingEvents();
+  const events = getUpcomingEvents(null);
   assert.ok(events.length > 0);
   assert.strictEqual(events[0].title, 'Python Workshop');
 });

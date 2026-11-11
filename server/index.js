@@ -4,7 +4,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { initDb } from './db.js';
 import authRoutes from './routes/authRoutes.js';
-import { getUpcomingEvents } from './services/eventService.js';
+import eventRoutes from './routes/eventRoutes.js';
+import registrationRoutes from './routes/registrationRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -28,18 +29,16 @@ app.use(
 
 // API Routes
 app.use('/api/auth', authRoutes);
-
-app.get('/api/events', (req, res) => {
-  if (!req.session.userId) {
-    return res.status(401).json({ error: 'Not signed in' });
-  }
-  const events = getUpcomingEvents();
-  return res.json({ events });
-});
+app.use('/api/events', eventRoutes);
+app.use('/api/registrations', registrationRoutes);
 
 // Static frontend serving placeholder for step 3
 app.use(express.static(path.join(__dirname, '../client')));
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+}
+
+export default app;
