@@ -6,7 +6,14 @@
   <style>
     body { font-family: sans-serif; max-width: 800px; margin: 30px auto; padding: 20px; }
     header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ccc; padding-bottom: 10px; margin-bottom: 20px; }
-    .event-card { border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 5px; }
+    .event-card { border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; }
+    .error-banner { background: #f8d7da; color: #721c24; padding: 10px; margin-bottom: 15px; border-radius: 4px; border: 1px solid #f5c6cb; }
+    button { padding: 8px 15px; cursor: pointer; border: none; border-radius: 4px; font-weight: bold; }
+    .btn-signup { background: #28a745; color: white; }
+    .btn-signup:hover { background: #218838; }
+    .btn-cancel { background: #dc3545; color: white; }
+    .btn-cancel:hover { background: #c82333; }
+    .full-label { font-weight: bold; color: #dc3545; }
   </style>
 </head>
 <body>
@@ -14,15 +21,37 @@
     <h1>Upcoming Events</h1>
     <div>
       <span id="user-name">Loading...</span>
-      <button id="signout-btn" style="margin-left: 10px; padding: 5px 10px;">Sign Out</button>
+      <button id="signout-btn" style="margin-left: 10px; padding: 5px 10px; background: #6c757d; color: white;">Sign Out</button>
     </div>
   </header>
 
   <main>
+    <div id="error-container"></div>
     <div id="events-list">Loading events...</div>
   </main>
 
   <script>
+    let errorMessage = '';
+
+    function showError(msg) {
+      errorMessage = msg;
+      renderError();
+    }
+
+    function clearError() {
+      errorMessage = '';
+      renderError();
+    }
+
+    function renderError() {
+      const errDiv = document.getElementById('error-container');
+      if (errorMessage) {
+        errDiv.innerHTML = `<div class="error-banner">${escapeHtml(errorMessage)}</div>`;
+      } else {
+        errDiv.innerHTML = '';
+      }
+    }
+
     async function checkAuthAndLoadEvents() {
       try {
         const authRes = await fetch('/api/auth/me');
@@ -33,24 +62,90 @@
         const authData = await authRes.json();
         document.getElementById('user-name').textContent = authData.user.name;
 
-        const eventsRes = await fetch('/api/events');
-        if (eventsRes.ok) {
-          const eventsData = await eventsRes.json();
-          const listDiv = document.getElementById('events-list');
-          if (eventsData.events.length === 0) {
-            listDiv.textContent = 'No upcoming events.';
-            return;
-          }
-          listDiv.innerHTML = eventsData.events.map(event => `
-            <div class="event-card">
-              <h3>${escapeHtml(event.title)}</h3>
-              <p>Date: ${new Date(event.date).toLocaleString()}</p>
-              <p>Total Places: ${event.places}</p>
-            </div>
-          `).join('');
-        }
+        await loadEvents();
       } catch (err) {
         window.location.href = '/signin.html';
+      }
+    }
+
+    async function loadEvents() {
+      const listDiv = document.getElementById('events-list');
+      listDiv.textContent = 'Loading events...';
+      clearError();
+
+      try {
+        const eventsRes = await fetch('/api/events');
+        if (!eventsRes.ok) {
+          const data = await eventsRes.json().catch(() => ({}));
+          showError(data.error || 'Failed to load events');
+          listDiv.innerHTML = '<p>Could not load events.</p>';
+          return;
+        }
+        const eventsData = await eventsRes.json();
+
+        if (eventsData.events.length === 0) {
+          listDiv.innerHTML = '<p>No upcoming events available. Check back later or contact your club organizer to add new events.</p>';
+          return;
+        }
+
+        listDiv.innerHTML = eventsData.events.map(event => {
+          let actionHtml = '';
+          if (event.registration_id !== null && event.registration_id !== undefined) {
+            actionHtml = `<button class="btn-cancel" onclick="cancelReg(${event.registration_id})">Cancel</button>`;
+          } else if (event.free_places > 0) {
+            actionHtml = `<button class="btn-signup" onclick="signUp(${event.id})">Sign up</button>`;
+          } else {
+            actionHtml = `<span class="full-label">Full</span>`;
+          }
+
+          return `
+            <div class="event-card">
+              <div>
+                <h3 style="margin: 0 0 5px 0;">${escapeHtml(event.title)}</h3>
+                <p style="margin: 0 0 5px 0; color: #555;">Date: ${new Date(event.date).toLocaleString()}</p>
+                <p style="margin: 0; color: #555;">Free Places: ${event.free_places}</p>
+              </div>
+              <div>${actionHtml}</div>
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        showError('Network error while loading events');
+        listDiv.innerHTML = '<p>Could not load events.</p>';
+      }
+    }
+
+    async function signUp(eventId) {
+      clearError();
+      try {
+        const res = await fetch(`/api/events/${eventId}/registrations`, {
+          method: 'POST'
+        });
+        if (res.ok) {
+          await loadEvents();
+        } else {
+          const data = await res.json().catch(() => ({}));
+          showError(data.error || 'Failed to sign up');
+        }
+      } catch (err) {
+        showError('Network error during sign up');
+      }
+    }
+
+    async function cancelReg(regId) {
+      clearError();
+      try {
+        const res = await fetch(`/api/registrations/${regId}`, {
+          method: 'DELETE'
+        });
+        if (res.status === 204 || res.ok) {
+          await loadEvents();
+        } else {
+          const data = await res.json().catch(() => ({}));
+          showError(data.error || 'Failed to cancel registration');
+        }
+      } catch (err) {
+        showError('Network error during cancellation');
       }
     }
 
