@@ -13,7 +13,7 @@ test('Migration 002 creates registrations table', () => {
   assert.strictEqual(tableCheck.name, 'registrations');
 });
 
-test('AC-13 & AC-15: signUpForEvent adds registration and prevents double sign-up', () => {
+test('AC-7 & AC-13 & AC-15: signUpForEvent adds registration and prevents double sign-up', () => {
   runMigrations();
   db.prepare('DELETE FROM users WHERE email = ?').run('testmember@club.com');
   const user = db.prepare('INSERT INTO users (email, password_hash, name) VALUES (?, ?, ?)').run(
@@ -49,7 +49,7 @@ test('AC-13 & AC-15: signUpForEvent adds registration and prevents double sign-u
   }
 });
 
-test('AC-14: signUpForEvent on full event throws ConflictError with message "This event is full"', () => {
+test('AC-6 & AC-14: signUpForEvent on full event throws ConflictError with message "This event is full"', () => {
   runMigrations();
   db.prepare('DELETE FROM users WHERE email IN (?, ?)').run('u1_14@club.com', 'u2_14@club.com');
   const user1 = db.prepare('INSERT INTO users (email, password_hash, name) VALUES (?, ?, ?)').run('u1_14@club.com', 'h', 'U1').lastInsertRowid;

@@ -44,7 +44,7 @@ test('AC-14: signing up for a full event returns 409 Conflict', async () => {
   }
 });
 
-test('Step 3: GET /api/events returns free_places and registration_id', async () => {
+test('AC-3 & AC-4: GET /api/events returns free_places and registration_id', async () => {
   const server = app.listen(0);
   const { port } = server.address();
   const baseUrl = `http://localhost:${port}`;
@@ -87,7 +87,7 @@ test('Step 3: GET /api/events returns free_places and registration_id', async ()
   }
 });
 
-test('Step 3: DELETE /api/registrations/:id cancels sign-up', async () => {
+test('AC-5 & AC-17: DELETE /api/registrations/:id cancels sign-up', async () => {
   const server = app.listen(0);
   const { port } = server.address();
   const baseUrl = `http://localhost:${port}`;
@@ -250,6 +250,49 @@ test('AC-21: deleting a registration that does not exist gets 404', async () => 
     });
 
     assert.strictEqual(deleteRes.status, 404);
+  } finally {
+    server.close();
+  }
+});
+
+test('AC-12 an event row deleted from the database no longer appears in GET /api/events', async () => {
+  const server = app.listen(0);
+  const { port } = server.address();
+  const baseUrl = `http://localhost:${port}`;
+
+  try {
+    // 1. Create an event
+    const eventId = db.prepare('INSERT INTO events (title, date, places) VALUES (?, ?, ?)').run(
+      'Deleted Event Test', '2030-01-01T10:00:00Z', 10
+    ).lastInsertRowid;
+
+    // 2. Sign in to get session cookie
+    const signinRes = await fetch(`${baseUrl}/api/auth/signin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'student@club.com', password: 'password123' })
+    });
+    const cookie = signinRes.headers.get('set-cookie');
+
+    // 3. Check that it is in the list
+    const eventsRes1 = await fetch(`${baseUrl}/api/events`, {
+      headers: { 'cookie': cookie }
+    });
+    const { events: events1 } = await eventsRes1.json();
+    const myEvent1 = events1.find(e => e.id === eventId);
+    assert.ok(myEvent1, 'Event should be in the list initially');
+
+    // 4. Delete the row with db.prepare
+    db.prepare('DELETE FROM events WHERE id = ?').run(eventId);
+
+    // 5. Check that it is gone
+    const eventsRes2 = await fetch(`${baseUrl}/api/events`, {
+      headers: { 'cookie': cookie }
+    });
+    const { events: events2 } = await eventsRes2.json();
+    const myEvent2 = events2.find(e => e.id === eventId);
+    assert.strictEqual(myEvent2, undefined, 'Event should no longer appear in GET /api/events');
+
   } finally {
     server.close();
   }
