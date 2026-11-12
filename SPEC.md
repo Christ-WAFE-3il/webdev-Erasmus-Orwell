@@ -52,6 +52,20 @@ React for the pages, Express and SQLite on the server, plain CSS. Screens: sign 
 ## Architecture
 <!-- Exercise 3. One request traced through every layer, naming the file for each one,
      plus one place where your own code does not match this layering. -->
+Following one request: a member clicks "Sign up".
+
+Browser
+- View: client/index.html shows the event list and the Sign up / Cancel / Full buttons.
+- State: the list is not kept anywhere: the events are read into a local variable (eventsData) and written into the events-list element; after each action the page fetches the list again from the server.
+- REST call: signUp (line 118 of client/index.html) calls POST /api/events/:id/registrations, and cancelReg (line 135) calls DELETE /api/registrations/:id.
+
+Server
+- Route: server/routes/eventRoutes.js receives POST /api/events/:id/registrations, calls the service and turns errors into 201, 404, 409 or 422. The 401 comes from the authenticate check.
+- Service: server/services/eventService.js, signUpForEvent, holds the rules (event exists, not past, not already registered, free places left) in one transaction.
+- Database call: db.prepare calls inside the same service functions (for example the INSERT INTO registrations), using the connection from server/db.js.
+- Answer: the route sends JSON back and the view reloads the list.
+
+Mismatch: the service writes SQL itself instead of calling a separate data layer, although AGENTS.md says only the data layer writes SQL. I left it because the project is small and the service needs the SQL inside its transaction.
 
 ## Acceptance criteria
 <!-- Every criterion carries an id. A test proves it by naming that id in its title, for example
