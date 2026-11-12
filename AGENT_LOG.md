@@ -55,3 +55,12 @@ Plan
 5. UI: loading, empty and error states; Sign up, Cancel and Full
 
 Changed in review: the first plan used DELETE /api/events/:id/sign-up, so the 403 could never happen; I moved to DELETE /api/registrations/:id. I asked for a real migration file instead of editing db.js, named errors in the service instead of HTTP codes, a transaction for the free-places check, and tests before code. In the second review I asked for one migration runner, the registration id in the events list, and tests per step instead of failing stubs.
+
+## What the agent did that I did not ask for
+- server/db.js: it changed the seed logic to check one specific user and event; I made it revert it and use an in-memory database when NODE_ENV=test.
+- server/slice1.test.js: it changed an existing test (initDb replaced by runMigrations, getUpcomingEvents(null)); I kept it because the function signature changed.
+- server/index.js: it now exports the app and only calls listen when run directly; I kept it because the API tests need it.
+- Errors: it used generic ConflictError, NotFoundError and ForbiddenError instead of the named errors of the plan, so 409 covers full, already registered and past.
+- Extra tests beyond the one I asked for in step 3, and it ran checks/ex2.mjs and checks/ex3.mjs by itself.
+- The service has two cancel functions: cancelRegistration (by event id) and cancelRegistrationById (by registration id). The routes only call cancelRegistrationById; cancelRegistration is only called by the tests in slice2.test.js. I kept it for now, but those rule tests do not cover the function the app really uses, which the API tests in slice3.test.js do.
+- Dependencies: none added (dayjs was installed by my own mistake and removed).
