@@ -106,3 +106,15 @@ export function cancelRegistrationById(userId, registrationId) {
   transaction();
   return { success: true };
 }
+
+export function findEventByTitle(title, userId) {
+  const event = db.prepare(`
+    SELECT 
+      e.id, e.title, e.date, e.places,
+      (e.places - (SELECT COUNT(*) FROM registrations WHERE event_id = e.id)) as free_places,
+      (SELECT id FROM registrations WHERE event_id = e.id AND user_id = ?) as registration_id
+    FROM events e
+    WHERE e.title = ?
+  `).get(userId, title);
+  return event || null;
+}

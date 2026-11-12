@@ -30,3 +30,8 @@ export function getUserById(id) {
   const user = db.prepare('SELECT id, email, name FROM users WHERE id = ?').get(id);
   return user || null;
 }
+
+export function findUserByEmail(email) {
+  const user = db.prepare('SELECT id, email, name FROM users WHERE email = ?').get(email);
+  return user || null;
+}
