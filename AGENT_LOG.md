@@ -64,3 +64,5 @@ Changed in review: the first plan used DELETE /api/events/:id/sign-up, so the 40
 - Extra tests beyond the one I asked for in step 3, and it ran checks/ex2.mjs and checks/ex3.mjs by itself.
 - The service has two cancel functions: cancelRegistration (by event id) and cancelRegistrationById (by registration id). The routes only call cancelRegistrationById; cancelRegistration is only called by the tests in slice2.test.js. I kept it for now, but those rule tests do not cover the function the app really uses, which the API tests in slice3.test.js do.
 - Dependencies: none added (dayjs was installed by my own mistake and removed).
+## 2026-11-14 · Usage recording
+- Went wrong: I did not run /stats at the end of the sessions where the plan, service, routes and UI were built, so their tokens are not recorded in USAGE.md. The last session shows four models with 0 tokens: their quota was used up and the CLI kept switching between them.
