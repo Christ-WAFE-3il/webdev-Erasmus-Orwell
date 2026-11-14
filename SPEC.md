@@ -88,7 +88,7 @@ Mismatch: the service writes SQL itself instead of calling a separate data layer
 - [AC-12] An event row deleted from the database no longer appears in the events list after a reload.
 
 ### Slice 2: sign up for an event
-- [AC-13] A signed-in member signs up for an event with free places and gets 201; one row appears in registrations and the free places go down by one.
+- [AC-13] A signed-in member signs up for an event with free places and gets 201; one row appears in registrations and the free places (places minus registrations, never a stored column) go down by one.
 - [AC-14] Signing up for a full event is refused with 409 and "This event is full"; no row is added.
 - [AC-15] Signing up twice for the same event is refused with 409; the member still has one row.
 - [AC-16] A sign-up request without a session is refused with 401.
