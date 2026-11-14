@@ -66,3 +66,25 @@ Changed in review: the first plan used DELETE /api/events/:id/sign-up, so the 40
 - Dependencies: none added (dayjs was installed by my own mistake and removed).
 ## 2026-11-14 · Usage recording
 - Went wrong: I did not run /stats at the end of the sessions where the plan, service, routes and UI were built, so their tokens are not recorded in USAGE.md. The last session shows four models with 0 tokens: their quota was used up and the CLI kept switching between them.
+
+## 2026-11-11 · Build slice 2 (sign up, cancel, UI)
+- Goal: build the sign-up feature in small steps: migration, service rules, routes, authorization tests, UI.
+- Autonomy: alone inside one step; I stopped it after each step, read the diff and committed.
+- Delegated: the migration and its runner, signUpForEvent and cancelRegistration, the three routes, the API tests, client/index.html.
+- Checkpoints: the failing test before the code (AC-14 returned 404 before it returned 409); npm test and git diff --staged before every commit; curl checks by hand (201, 409, 401, 403, 204); sign up and cancel in the browser.
+- Went wrong: the tests ran on the real database file until I made them use an in-memory database; it changed the seed logic in db.js outside the plan; the first versions of the tests were not in the npm test script.
+- Changed by hand: added slice3.test.js to the test script and the AC ids to test titles; recreated the database.
+
+## 2026-11-13 · MCP tools
+- Goal: three MCP tools (list_events, find_event, register_for_event) that call the services, with the user read from MCP_USER_EMAIL.
+- Delegated: the plan, the test, the tools, findUserByEmail.
+- Checkpoints: plan review (no SQL in the MCP source, nothing on stdout but the protocol); the test written first and seen failing; node mcp-server/check.mjs at 12/12; grep for SQL in mcp-server/server.js.
+- Went wrong: its conversion to ES modules crashed the server; it then ran the same test about ten times, changed db.js three times (WAL, DATABASE_PATH, initDb) and added debug logging. migrate.js wrote to stdout, which breaks the protocol. The WAL mode stays in the database file, so my real database filled with test events and -wal files.
+- Changed by hand: I stopped it, gave it the probable cause (imports run before the environment variable is set), deleted the polluted databases and added them to .gitignore.
+
+## 2026-11-14 · Model feature (description suggestion)
+- Goal: suggest an event description from a title and keywords, with a timeout, a fallback and a fake client in the tests.
+- Delegated: the plan, descriptionService.js, its tests, the route POST /api/events/suggest-description.
+- Checkpoints: plan review with five changes (injected client, key in a header, 422 on bad input, fallback cut to 300 characters, tests first); grep for key= and console in the service; the provider named in one file only; npm test count after each step.
+- Went wrong: the new test file was not in npm test until I added it; the timeout timer is probably never cleared, so the tests take longer.
+- Changed by hand: added description.test.js to the test script.
