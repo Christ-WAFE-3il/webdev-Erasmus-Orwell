@@ -19,3 +19,7 @@ coverage/
 
 # editor and OS files
 .DS_Store
+
+# Local and test databases
+server/*.sqlite
+server/*.sqlite-*

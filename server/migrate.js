@@ -12,7 +12,7 @@ export function runMigrations() {
 
   const migrationsDir = path.join(__dirname, '../migrations');
   if (!fs.existsSync(migrationsDir)) {
-    console.log('No migrations directory found.');
+    console.error('No migrations directory found.');
     return;
   }
 
@@ -40,7 +40,7 @@ export function runMigrations() {
       });
 
       runMigrationTransaction();
-      console.log(`Applied migration: ${file}`);
+      console.error(`Applied migration: ${file}`);
     }
   }
 }
@@ -48,5 +48,5 @@ export function runMigrations() {
 // If run directly via node server/migrate.js
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   runMigrations();
-  console.log('Migrations completed successfully.');
+  console.error('Migrations completed successfully.');
 }
