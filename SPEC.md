@@ -71,14 +71,11 @@ Mismatch: the service writes SQL itself instead of calling a separate data layer
 <!-- Every criterion carries an id. A test proves it by naming that id in its title, for example
      test('AC-3 a booking that overlaps another is refused with 409', ...).
      Say who acts, what they see, and what must be true in the database. -->
-- [AC-1] An organizer fills in the new event form (title, date, places) and submits it; the event appears in the upcoming events list with its free places.
-- [AC-2] An organizer opens the registrations tab of their event and sees the list of members signed up, with their names.
 - [AC-3] A member opens the upcoming events list and sees, for each event, the title, the date and the free places left, soonest first.
 - [AC-4] A member clicks "Sign up" on an event with free places; the button becomes "Cancel" and the free places go down by one.
 - [AC-5] A member clicks "Cancel" on an event they signed up for; the button becomes "Sign up" again and the free places go up by one.
 - [AC-6] A member opens a full event and sees "Full" instead of a sign-up button, so nobody else can sign up.
 - [AC-7] A member already registered for an event cannot register twice: that event shows only a "Cancel" button.
-- [AC-8] A member who is not the organizer opens the edit page of an event and sees "Not allowed" instead of the form.
 
 
 ### Slice 1: sign-in and the upcoming events list
@@ -120,5 +117,5 @@ Mismatch: the service writes SQL itself instead of calling a separate data layer
 <!-- After the agent builds the slice: which criteria passed, which it missed or reinterpreted, and what you changed in this spec because of it. -->
 
 - Passed: AC-9 (no session gives 401), AC-10 (sign-in shows the list and my name), AC-11 (a wrong password shows "Wrong email or password"). Deleting an event row in the database and reloading removed it from the screen.
-- Missed: the plan stored free_places in events and used a connection pool, so I asked for total places only and a SQLite file. The agent also added a verify-step1.js file nobody asked for.
-- Changed: added a criterion saying the list comes from the database, because no criterion covered it.
+- Missed: the agent used generic errors (ConflictError), so one 409 covers "full", "already registered" and "past event".
+- Removed: AC-1, AC-2 and AC-8 (the organizer role: create an event, list its registrations, forbid editing for others) are removed from the spec, because I did not build the organizer role in this exercise.
