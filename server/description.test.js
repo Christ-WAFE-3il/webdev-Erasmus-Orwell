@@ -26,3 +26,23 @@ test('suggestDescription falls back on timeout', async () => {
   assert.ok(result.length <= 300);
   assert.ok(result.includes('Seminar'));
 });
+
+test('suggestDescription returns good answer when provided', async () => {
+  const goodClient = async () => 'Join our exciting workshop to learn Python fundamentals.';
+
+  const result = await suggestDescription('Python Workshop', 'coding', goodClient);
+  assert.strictEqual(result, 'Join our exciting workshop to learn Python fundamentals.');
+});
+
+test('suggestDescription falls back on nonsense answer (empty or too long)', async () => {
+  const emptyClient = async () => '';
+  const longClient = async () => 'a'.repeat(301);
+
+  const res1 = await suggestDescription('Event 1', 'test', emptyClient);
+  assert.ok(res1.includes('Event 1'));
+  assert.ok(res1.length <= 300);
+
+  const res2 = await suggestDescription('Event 2', 'test', longClient);
+  assert.ok(res2.includes('Event 2'));
+  assert.ok(res2.length <= 300);
+});
