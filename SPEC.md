@@ -118,4 +118,4 @@ Mismatch: the service writes SQL itself instead of calling a separate data layer
 
 - Passed: AC-9 (no session gives 401), AC-10 (sign-in shows the list and my name), AC-11 (a wrong password shows "Wrong email or password"). Deleting an event row in the database and reloading removed it from the screen.
 - Missed: the agent used generic errors (ConflictError), so one 409 covers "full", "already registered" and "past event".
-- Removed: AC-1, AC-2 and AC-8 (the organizer role: create an event, list its registrations, forbid editing for others) are removed from the spec, because I did not build the organizer role in this exercise.
+- Removed: AC-1, AC-2 and AC-8 (the organizer role: create an event, list its registrations, forbid editing for others) are removed from the spec, because I did not build the organizer role in this exercise.22285

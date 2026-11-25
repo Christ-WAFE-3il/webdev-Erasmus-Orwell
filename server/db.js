@@ -41,9 +41,9 @@ export function initDb() {
   const eventCount = db.prepare('SELECT COUNT(*) as count FROM events').get().count;
   if (eventCount === 0) {
     const insertEvent = db.prepare('INSERT INTO events (title, date, places) VALUES (?, ?, ?)');
-    insertEvent.run('Python Workshop', '2026-11-15T18:00:00Z', 20);
-    insertEvent.run('Web Dev Hackathon', '2026-11-22T10:00:00Z', 15);
-    insertEvent.run('AI & Ethics Seminar', '2026-11-29T17:30:00Z', 30);
+    insertEvent.run('Python Workshop', '2027-03-15T18:00:00Z', 20);
+    insertEvent.run('Web Dev Hackathon', '2027-03-22T10:00:00Z', 15);
+    insertEvent.run('AI & Ethics Seminar', '2027-03-29T17:30:00Z', 30);
   }
 }
 

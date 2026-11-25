@@ -10,6 +10,15 @@ import registrationRoutes from './routes/registrationRoutes.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const required = ['SESSION_SECRET'];
+if (process.env.NODE_ENV !== 'test') {
+  const missing = required.filter((name) => !process.env[name]);
+  if (missing.length > 0) {
+    console.error(`Missing environment variable(s): ${missing.join(', ')}. See .env.example`);
+    process.exit(1);
+  }
+}
+
 initDb();
 
 const app = express();
@@ -20,7 +29,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(
   session({
-    secret: 'club-events-secret-key',
+    secret: process.env.SESSION_SECRET || 'test-only-secret',
     resave: false,
     saveUninitialized: false,
     cookie: { secure: false, httpOnly: true }
