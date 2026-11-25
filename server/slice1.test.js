@@ -56,7 +56,7 @@ test('AC-9 & AC-3: upcoming events can be retrieved ordered by date', async () =
   assert.strictEqual(events[0].title, 'Python Workshop');
 });
 
-test.skip('AC-3: findEventByTitle retrieves event by title', async () => {
+test('AC-3: findEventByTitle retrieves event by title', async () => {
   const event = await findEventByTitle('Python Workshop', null);
   assert.ok(event);
   assert.strictEqual(event.title, 'Python Workshop');
