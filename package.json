@@ -8,10 +8,10 @@
     "doc": "docs"
   },
   "scripts": {
-    "test": "NODE_ENV=test node --test --test-concurrency=1 server/slice1.test.js server/slice2.test.js server/slice3.test.js server/mcp.test.js server/description.test.js",
-    "start": "node server/index.js",
-    "mcp": "node mcp-server/server.js",
-    "migrate": "node server/migrate.js"
+    "test": "NODE_ENV=test node --env-file-if-exists=.env --test --test-concurrency=1 server/slice1.test.js server/slice2.test.js server/slice3.test.js server/mcp.test.js server/description.test.js",
+    "start": "node --env-file-if-exists=.env server/index.js",
+    "mcp": "node --env-file-if-exists=.env mcp-server/server.js",
+    "migrate": "node --env-file-if-exists=.env server/migrate.js"
   },
   "repository": {
     "type": "git",
@@ -26,8 +26,8 @@
   "homepage": "https://github.com/Christ-WAFE-3il/webdev-Erasmus-Orwell#readme",
   "dependencies": {
     "bcrypt": "^6.0.0",
-    "better-sqlite3": "^13.0.3",
     "express": "^5.3.0",
-    "express-session": "^1.19.0"
+    "express-session": "^1.19.0",
+    "pg": "^8.23.1"
   }
 }

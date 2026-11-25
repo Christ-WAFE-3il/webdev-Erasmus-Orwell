@@ -1,4 +1,18 @@
-import db from '../db.js';
+import { 
+  getUpcomingEvents as getUpcomingEventsData, 
+  getEventById, 
+  findEventByTitle as findEventByTitleData 
+} from '../data/eventData.js';
+import { 
+  getRegistrationCountForEvent, 
+  insertRegistration, 
+  getRegistrationByEventAndUser, 
+  getRegistrationByEventAndOtherUser, 
+  deleteRegistration, 
+  getRegistrationById, 
+  deleteRegistrationById 
+} from '../data/registrationData.js';
+import { withTransaction } from '../data/dbUtils.js';
 
 export class NotFoundError extends Error {
   constructor(message) {
@@ -21,22 +35,13 @@ export class ForbiddenError extends Error {
   }
 }
 
-export function getUpcomingEvents(userId) {
+export async function getUpcomingEvents(userId) {
   const now = new Date().toISOString();
-  const events = db.prepare(`
-    SELECT 
-      e.id, e.title, e.date, e.places,
-      (e.places - (SELECT COUNT(*) FROM registrations WHERE event_id = e.id)) as free_places,
-      (SELECT id FROM registrations WHERE event_id = e.id AND user_id = ?) as registration_id
-    FROM events e
-    WHERE e.date >= ?
-    ORDER BY e.date ASC
-  `).all(userId, now);
-  return events;
+  return await getUpcomingEventsData(userId, now);
 }
 
-export function signUpForEvent(userId, eventId) {
-  const event = db.prepare('SELECT * FROM events WHERE id = ?').get(eventId);
+export async function signUpForEvent(userId, eventId) {
+  const event = await getEventById(eventId);
   if (!event) {
     throw new NotFoundError('Event not found');
   }
@@ -46,51 +51,49 @@ export function signUpForEvent(userId, eventId) {
     throw new ConflictError('This event has already happened');
   }
 
-  const regCount = db.prepare('SELECT COUNT(*) as count FROM registrations WHERE event_id = ?').get(eventId).count;
+  const regCount = await getRegistrationCountForEvent(eventId);
   if (regCount >= event.places) {
     throw new ConflictError('This event is full');
   }
 
-  const transaction = db.transaction(() => {
+  await withTransaction(async (client) => {
     try {
-      db.prepare('INSERT INTO registrations (user_id, event_id) VALUES (?, ?)').run(userId, eventId);
+      await insertRegistration(client, userId, eventId);
     } catch (err) {
-      if (err.code === 'SQLITE_CONSTRAINT_UNIQUE' || err.message.includes('UNIQUE constraint failed')) {
+      if (err.code === '23505') {
         throw new ConflictError('Already registered');
       }
       throw err;
     }
   });
 
-  transaction();
   return { success: true };
 }
 
-export function cancelRegistration(userId, eventId) {
-  const event = db.prepare('SELECT * FROM events WHERE id = ?').get(eventId);
+export async function cancelRegistration(userId, eventId) {
+  const event = await getEventById(eventId);
   if (!event) {
     throw new NotFoundError('Event not found');
   }
 
-  const reg = db.prepare('SELECT * FROM registrations WHERE event_id = ? AND user_id = ?').get(eventId, userId);
+  const reg = await getRegistrationByEventAndUser(eventId, userId);
   if (!reg) {
-    const anyReg = db.prepare('SELECT * FROM registrations WHERE event_id = ? AND user_id != ?').get(eventId, userId);
+    const anyReg = await getRegistrationByEventAndOtherUser(eventId, userId);
     if (anyReg) {
       throw new ForbiddenError('Cannot cancel another member\'s registration');
     }
     throw new NotFoundError('Registration not found');
   }
 
-  const transaction = db.transaction(() => {
-    db.prepare('DELETE FROM registrations WHERE user_id = ? AND event_id = ?').run(userId, eventId);
+  await withTransaction(async (client) => {
+    await deleteRegistration(client, userId, eventId);
   });
 
-  transaction();
   return { success: true };
 }
 
-export function cancelRegistrationById(userId, registrationId) {
-  const reg = db.prepare('SELECT * FROM registrations WHERE id = ?').get(registrationId);
+export async function cancelRegistrationById(userId, registrationId) {
+  const reg = await getRegistrationById(registrationId);
   if (!reg) {
     throw new NotFoundError('Registration not found');
   }
@@ -99,22 +102,13 @@ export function cancelRegistrationById(userId, registrationId) {
     throw new ForbiddenError('Cannot cancel another member\'s registration');
   }
 
-  const transaction = db.transaction(() => {
-    db.prepare('DELETE FROM registrations WHERE id = ?').run(registrationId);
+  await withTransaction(async (client) => {
+    await deleteRegistrationById(client, registrationId);
   });
 
-  transaction();
   return { success: true };
 }
 
-export function findEventByTitle(title, userId) {
-  const event = db.prepare(`
-    SELECT 
-      e.id, e.title, e.date, e.places,
-      (e.places - (SELECT COUNT(*) FROM registrations WHERE event_id = e.id)) as free_places,
-      (SELECT id FROM registrations WHERE event_id = e.id AND user_id = ?) as registration_id
-    FROM events e
-    WHERE e.title = ?
-  `).get(userId, title);
-  return event || null;
+export async function findEventByTitle(title, userId) {
+  return await findEventByTitleData(title, userId);
 }

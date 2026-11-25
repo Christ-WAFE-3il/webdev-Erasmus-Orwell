@@ -1,11 +1,16 @@
-import test from 'node:test';
+import test, { beforeEach, after } from 'node:test';
 import assert from 'node:assert';
 import app from './index.js';
-import db from './db.js';
-import { runMigrations } from './migrate.js';
 import { suggestDescription } from './services/descriptionService.js';
+import { setupTestDb, closeTestDb } from './testHelper.js';
 
-runMigrations();
+beforeEach(async () => {
+  await setupTestDb();
+});
+
+after(async () => {
+  await closeTestDb();
+});
 
 test('suggestDescription falls back when client fails or times out', async () => {
   const failingClient = async () => {

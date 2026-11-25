@@ -1,50 +1,72 @@
-import Database from 'better-sqlite3';
+import pg from 'pg';
 import bcrypt from 'bcrypt';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const { Pool } = pg;
 
-const dbPath = process.env.DATABASE_PATH || (process.env.NODE_ENV === 'test' ? ':memory:' : path.join(__dirname, 'database.sqlite'));
-const db = new Database(dbPath);
+const isTest = process.env.NODE_ENV === 'test';
+const connectionString = isTest ? process.env.TEST_DATABASE_URL : process.env.DATABASE_URL;
 
-// Initialize tables and seed data
-export function initDb() {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      email TEXT UNIQUE NOT NULL,
-      password_hash TEXT NOT NULL,
-      name TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS events (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      title TEXT NOT NULL,
-      date TEXT NOT NULL,
-      places INTEGER NOT NULL
-    );
-  `);
-
-  // Check if test user exists, if not seed test user and events
-  const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
-  if (userCount === 0) {
-    const passwordHash = bcrypt.hashSync('password123', 10);
-    db.prepare('INSERT INTO users (email, password_hash, name) VALUES (?, ?, ?)').run(
-      'student@club.com',
-      passwordHash,
-      'Alice Student'
-    );
+if (isTest) {
+  if (!connectionString) {
+    throw new Error('TEST_DATABASE_URL is required for tests');
   }
-
-  const eventCount = db.prepare('SELECT COUNT(*) as count FROM events').get().count;
-  if (eventCount === 0) {
-    const insertEvent = db.prepare('INSERT INTO events (title, date, places) VALUES (?, ?, ?)');
-    insertEvent.run('Python Workshop', '2027-03-15T18:00:00Z', 20);
-    insertEvent.run('Web Dev Hackathon', '2027-03-22T10:00:00Z', 15);
-    insertEvent.run('AI & Ethics Seminar', '2027-03-29T17:30:00Z', 30);
+  if (connectionString === process.env.DATABASE_URL) {
+    throw new Error('TEST_DATABASE_URL must not be the same as DATABASE_URL');
   }
 }
 
-export default db;
+const pool = new Pool({
+  connectionString
+});
+
+// Initialize tables and seed data
+export async function initDb() {
+  const client = await pool.connect();
+  try {
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        email TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        name TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS events (
+        id SERIAL PRIMARY KEY,
+        title TEXT NOT NULL,
+        date TEXT NOT NULL,
+        places INTEGER NOT NULL
+      );
+    `);
+
+    // Check if test user exists, if not seed test user and events
+    const userCountResult = await client.query('SELECT COUNT(*) as count FROM users');
+    const userCount = parseInt(userCountResult.rows[0].count);
+    if (userCount === 0) {
+      const passwordHash = bcrypt.hashSync('password123', 10);
+      await client.query('INSERT INTO users (email, password_hash, name) VALUES ($1, $2, $3) ON CONFLICT (email) DO NOTHING', [
+        'student@club.com',
+        passwordHash,
+        'Alice Student'
+      ]);
+    }
+
+    const eventCountResult = await client.query('SELECT COUNT(*) as count FROM events');
+    const eventCount = parseInt(eventCountResult.rows[0].count);
+    if (eventCount === 0) {
+      await client.query('INSERT INTO events (title, date, places) VALUES ($1, $2, $3)', [
+        'Python Workshop', '2027-03-15T18:00:00Z', 20
+      ]);
+      await client.query('INSERT INTO events (title, date, places) VALUES ($1, $2, $3)', [
+        'Web Dev Hackathon', '2027-03-22T10:00:00Z', 15
+      ]);
+      await client.query('INSERT INTO events (title, date, places) VALUES ($1, $2, $3)', [
+        'AI & Ethics Seminar', '2027-03-29T17:30:00Z', 30
+      ]);
+    }
+  } finally {
+    client.release();
+  }
+}
+
+export default pool;

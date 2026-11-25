@@ -10,7 +10,7 @@ import registrationRoutes from './routes/registrationRoutes.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const required = ['SESSION_SECRET'];
+const required = ['SESSION_SECRET', 'DATABASE_URL'];
 if (process.env.NODE_ENV !== 'test') {
   const missing = required.filter((name) => !process.env[name]);
   if (missing.length > 0) {

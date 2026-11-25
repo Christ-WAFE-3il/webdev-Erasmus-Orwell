@@ -16,8 +16,8 @@ const authenticate = (req, res, next) => {
   next();
 };
 
-router.get('/', authenticate, (req, res) => {
-  const events = getUpcomingEvents(req.session.userId);
+router.get('/', authenticate, async (req, res) => {
+  const events = await getUpcomingEvents(req.session.userId);
   return res.json({ events });
 });
 
@@ -41,14 +41,14 @@ router.post('/suggest-description', authenticate, async (req, res) => {
   }
 });
 
-router.post('/:id/registrations', authenticate, (req, res) => {
+router.post('/:id/registrations', authenticate, async (req, res) => {
   const eventId = parseInt(req.params.id);
   if (isNaN(eventId)) {
     return res.status(422).json({ error: 'Invalid event ID' });
   }
 
   try {
-    signUpForEvent(req.session.userId, eventId);
+    await signUpForEvent(req.session.userId, eventId);
     return res.status(201).json({ message: 'Signed up successfully' });
   } catch (err) {
     if (err instanceof NotFoundError) {

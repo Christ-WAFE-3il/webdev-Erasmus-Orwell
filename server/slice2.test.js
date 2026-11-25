@@ -1,134 +1,122 @@
-import test from 'node:test';
+import test, { beforeEach, after } from 'node:test';
 import assert from 'node:assert';
-import db from './db.js';
+import pool from './db.js';
 import { runMigrations } from './migrate.js';
 import { signUpForEvent, cancelRegistration } from './services/eventService.js';
+import { setupTestDb, closeTestDb } from './testHelper.js';
 
-test('Migration 002 creates registrations table', () => {
-  runMigrations();
-  const tableCheck = db.prepare(
-    "SELECT name FROM sqlite_master WHERE type='table' AND name='registrations'"
-  ).get();
-  assert.ok(tableCheck, 'registrations table should exist');
-  assert.strictEqual(tableCheck.name, 'registrations');
+beforeEach(async () => {
+  await setupTestDb();
 });
 
-test('AC-7 & AC-13 & AC-15: signUpForEvent adds registration and prevents double sign-up', () => {
-  runMigrations();
-  db.prepare('DELETE FROM users WHERE email = ?').run('testmember@club.com');
-  const user = db.prepare('INSERT INTO users (email, password_hash, name) VALUES (?, ?, ?)').run(
+after(async () => {
+  await closeTestDb();
+});
+
+test('Migration 002 creates registrations table', async () => {
+  await runMigrations();
+  const tableCheckRes = await pool.query(
+    "SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename='registrations'"
+  );
+  assert.ok(tableCheckRes.rows.length > 0, 'registrations table should exist');
+  assert.strictEqual(tableCheckRes.rows[0].tablename, 'registrations');
+});
+
+test('AC-7 & AC-13 & AC-15: signUpForEvent adds registration and prevents double sign-up', async () => {
+  const userRes = await pool.query('INSERT INTO users (email, password_hash, name) VALUES ($1, $2, $3) RETURNING id', [
     'testmember@club.com',
     'hash',
     'Test Member'
-  );
-  const userId = user.lastInsertRowid;
+  ]);
+  const userId = userRes.rows[0].id;
 
-  const event = db.prepare('INSERT INTO events (title, date, places) VALUES (?, ?, ?)').run(
+  const eventRes = await pool.query('INSERT INTO events (title, date, places) VALUES ($1, $2, $3) RETURNING id', [
     'Test Event 13',
     '2030-01-01T10:00:00Z',
     5
-  );
-  const eventId = event.lastInsertRowid;
+  ]);
+  const eventId = eventRes.rows[0].id;
 
-  try {
-    const res = signUpForEvent(userId, eventId);
-    assert.ok(res.success, 'Sign up should succeed');
+  const res = await signUpForEvent(userId, eventId);
+  assert.ok(res.success, 'Sign up should succeed');
 
-    const count = db.prepare('SELECT COUNT(*) as count FROM registrations WHERE user_id = ? AND event_id = ?').get(userId, eventId).count;
-    assert.strictEqual(count, 1, 'One row should appear in registrations');
+  const countRes = await pool.query('SELECT COUNT(*) as count FROM registrations WHERE user_id = $1 AND event_id = $2', [userId, eventId]);
+  const count = parseInt(countRes.rows[0].count);
+  assert.strictEqual(count, 1, 'One row should appear in registrations');
 
-    assert.throws(() => {
-      signUpForEvent(userId, eventId);
-    }, (err) => {
-      return err.name === 'ConflictError';
-    }, 'Signing up twice should throw ConflictError');
-  } finally {
-    db.prepare('DELETE FROM registrations WHERE event_id = ?').run(eventId);
-    db.prepare('DELETE FROM events WHERE id = ?').run(eventId);
-    db.prepare('DELETE FROM users WHERE id = ?').run(userId);
-  }
+  await assert.rejects(async () => {
+    await signUpForEvent(userId, eventId);
+  }, (err) => {
+    return err.name === 'ConflictError';
+  }, 'Signing up twice should throw ConflictError');
 });
 
-test('AC-6 & AC-14: signUpForEvent on full event throws ConflictError with message "This event is full"', () => {
-  runMigrations();
-  db.prepare('DELETE FROM users WHERE email IN (?, ?)').run('u1_14@club.com', 'u2_14@club.com');
-  const user1 = db.prepare('INSERT INTO users (email, password_hash, name) VALUES (?, ?, ?)').run('u1_14@club.com', 'h', 'U1').lastInsertRowid;
-  const user2 = db.prepare('INSERT INTO users (email, password_hash, name) VALUES (?, ?, ?)').run('u2_14@club.com', 'h', 'U2').lastInsertRowid;
-  const event = db.prepare('INSERT INTO events (title, date, places) VALUES (?, ?, ?)').run('Small Event 14', '2030-01-01T10:00:00Z', 1).lastInsertRowid;
+test('AC-6 & AC-14: signUpForEvent on full event throws ConflictError with message "This event is full"', async () => {
+  const user1Res = await pool.query('INSERT INTO users (email, password_hash, name) VALUES ($1, $2, $3) RETURNING id', ['u1_14@club.com', 'h', 'U1']);
+  const user1 = user1Res.rows[0].id;
+  const user2Res = await pool.query('INSERT INTO users (email, password_hash, name) VALUES ($1, $2, $3) RETURNING id', ['u2_14@club.com', 'h', 'U2']);
+  const user2 = user2Res.rows[0].id;
+  const eventRes = await pool.query('INSERT INTO events (title, date, places) VALUES ($1, $2, $3) RETURNING id', ['Small Event 14', '2030-01-01T10:00:00Z', 1]);
+  const event = eventRes.rows[0].id;
 
-  try {
-    signUpForEvent(user1, event);
+  await signUpForEvent(user1, event);
 
-    assert.throws(() => {
-      signUpForEvent(user2, event);
-    }, (err) => {
-      return err.name === 'ConflictError' && err.message === 'This event is full';
-    });
-  } finally {
-    db.prepare('DELETE FROM registrations WHERE event_id = ?').run(event);
-    db.prepare('DELETE FROM events WHERE id = ?').run(event);
-    db.prepare('DELETE FROM users WHERE id IN (?, ?)').run(user1, user2);
-  }
+  await assert.rejects(async () => {
+    await signUpForEvent(user2, event);
+  }, (err) => {
+    return err.name === 'ConflictError' && err.message === 'This event is full';
+  });
 });
 
-test('AC-19 & AC-20 & AC-22: edge cases for signUpForEvent', () => {
-  runMigrations();
-  db.prepare('DELETE FROM users WHERE email = ?').run('u_edge@club.com');
-  const user = db.prepare('INSERT INTO users (email, password_hash, name) VALUES (?, ?, ?)').run('u_edge@club.com', 'h', 'U').lastInsertRowid;
-  const pastEvent = db.prepare('INSERT INTO events (title, date, places) VALUES (?, ?, ?)').run('Past Event 20', '2020-01-01T10:00:00Z', 10).lastInsertRowid;
+test('AC-19 & AC-20 & AC-22: edge cases for signUpForEvent', async () => {
+  const userRes = await pool.query('INSERT INTO users (email, password_hash, name) VALUES ($1, $2, $3) RETURNING id', ['u_edge@club.com', 'h', 'U']);
+  const user = userRes.rows[0].id;
+  const eventRes = await pool.query('INSERT INTO events (title, date, places) VALUES ($1, $2, $3) RETURNING id', ['Past Event 20', '2020-01-01T10:00:00Z', 10]);
+  const pastEvent = eventRes.rows[0].id;
 
-  try {
-    // Past event (AC-20)
-    assert.throws(() => {
-      signUpForEvent(user, pastEvent);
-    }, (err) => {
-      return err.name === 'ConflictError' && err.message === 'This event has already happened';
-    });
+  // Past event (AC-20)
+  await assert.rejects(async () => {
+    await signUpForEvent(user, pastEvent);
+  }, (err) => {
+    return err.name === 'ConflictError' && err.message === 'This event has already happened';
+  });
 
-    // Non-existent event (AC-19)
-    assert.throws(() => {
-      signUpForEvent(user, 99999);
-    }, (err) => {
-      return err.name === 'NotFoundError';
-    });
-  } finally {
-    db.prepare('DELETE FROM events WHERE id = ?').run(pastEvent);
-    db.prepare('DELETE FROM users WHERE id = ?').run(user);
-  }
+  // Non-existent event (AC-19)
+  await assert.rejects(async () => {
+    await signUpForEvent(user, 99999);
+  }, (err) => {
+    return err.name === 'NotFoundError';
+  });
 });
 
-test('AC-17 & AC-18 & AC-21: cancelRegistration rules', () => {
-  runMigrations();
-  db.prepare('DELETE FROM users WHERE email IN (?, ?)').run('u1_17@club.com', 'u2_17@club.com');
-  const user1 = db.prepare('INSERT INTO users (email, password_hash, name) VALUES (?, ?, ?)').run('u1_17@club.com', 'h', 'U1').lastInsertRowid;
-  const user2 = db.prepare('INSERT INTO users (email, password_hash, name) VALUES (?, ?, ?)').run('u2_17@club.com', 'h', 'U2').lastInsertRowid;
-  const event = db.prepare('INSERT INTO events (title, date, places) VALUES (?, ?, ?)').run('Event 17', '2030-01-01T10:00:00Z', 10).lastInsertRowid;
+test('AC-17 & AC-18 & AC-21: cancelRegistration rules', async () => {
+  const user1Res = await pool.query('INSERT INTO users (email, password_hash, name) VALUES ($1, $2, $3) RETURNING id', ['u1_17@club.com', 'h', 'U1']);
+  const user1 = user1Res.rows[0].id;
+  const user2Res = await pool.query('INSERT INTO users (email, password_hash, name) VALUES ($1, $2, $3) RETURNING id', ['u2_17@club.com', 'h', 'U2']);
+  const user2 = user2Res.rows[0].id;
+  const eventRes = await pool.query('INSERT INTO events (title, date, places) VALUES ($1, $2, $3) RETURNING id', ['Event 17', '2030-01-01T10:00:00Z', 10]);
+  const event = eventRes.rows[0].id;
 
-  try {
-    // Cancel when no one ever registered (AC-21)
-    assert.throws(() => {
-      cancelRegistration(user2, event);
-    }, (err) => {
-      return err.name === 'NotFoundError';
-    });
+  // Cancel when no one ever registered (AC-21)
+  await assert.rejects(async () => {
+    await cancelRegistration(user2, event);
+  }, (err) => {
+    return err.name === 'NotFoundError';
+  });
 
-    signUpForEvent(user1, event);
+  await signUpForEvent(user1, event);
 
-    // Cancel another member's registration (AC-18)
-    assert.throws(() => {
-      cancelRegistration(user2, event);
-    }, (err) => {
-      return err.name === 'ForbiddenError';
-    });
+  // Cancel another member's registration (AC-18)
+  await assert.rejects(async () => {
+    await cancelRegistration(user2, event);
+  }, (err) => {
+    return err.name === 'ForbiddenError';
+  });
 
-    // Cancel own registration successfully (AC-17)
-    const res = cancelRegistration(user1, event);
-    assert.ok(res.success, 'Cancel should succeed');
-    const count = db.prepare('SELECT COUNT(*) as count FROM registrations WHERE user_id = ? AND event_id = ?').get(user1, event).count;
-    assert.strictEqual(count, 0, 'Registration row should be removed');
-  } finally {
-    db.prepare('DELETE FROM registrations WHERE event_id = ?').run(event);
-    db.prepare('DELETE FROM events WHERE id = ?').run(event);
-    db.prepare('DELETE FROM users WHERE id IN (?, ?)').run(user1, user2);
-  }
+  // Cancel own registration successfully (AC-17)
+  const res = await cancelRegistration(user1, event);
+  assert.ok(res.success, 'Cancel should succeed');
+  const countRes = await pool.query('SELECT COUNT(*) as count FROM registrations WHERE user_id = $1 AND event_id = $2', [user1, event]);
+  const count = parseInt(countRes.rows[0].count);
+  assert.strictEqual(count, 0, 'Registration row should be removed');
 });

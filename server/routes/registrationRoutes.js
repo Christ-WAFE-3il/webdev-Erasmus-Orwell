@@ -14,14 +14,14 @@ const authenticate = (req, res, next) => {
   next();
 };
 
-router.delete('/:id', authenticate, (req, res) => {
+router.delete('/:id', authenticate, async (req, res) => {
   const registrationId = parseInt(req.params.id);
   if (isNaN(registrationId)) {
     return res.status(422).json({ error: 'Invalid registration ID' });
   }
 
   try {
-    cancelRegistrationById(req.session.userId, registrationId);
+    await cancelRegistrationById(req.session.userId, registrationId);
     return res.status(204).end();
   } catch (err) {
     if (err instanceof NotFoundError) {

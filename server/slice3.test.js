@@ -1,11 +1,17 @@
-import test from 'node:test';
+import test, { beforeEach, after } from 'node:test';
 import assert from 'node:assert';
 import bcrypt from 'bcrypt';
 import app from './index.js';
-import db from './db.js';
-import { runMigrations } from './migrate.js';
+import pool from './db.js';
+import { setupTestDb, closeTestDb } from './testHelper.js';
 
-runMigrations();
+beforeEach(async () => {
+  await setupTestDb();
+});
+
+after(async () => {
+  await closeTestDb();
+});
 
 test('AC-14: signing up for a full event returns 409 Conflict', async () => {
   const server = app.listen(0);
@@ -14,9 +20,10 @@ test('AC-14: signing up for a full event returns 409 Conflict', async () => {
 
   try {
     // 1. Create a full event
-    const eventId = db.prepare('INSERT INTO events (title, date, places) VALUES (?, ?, ?)').run(
+    const eventRes = await pool.query('INSERT INTO events (title, date, places) VALUES ($1, $2, $3) RETURNING id', [
       'Full Event API Test', '2030-01-01T10:00:00Z', 0
-    ).lastInsertRowid;
+    ]);
+    const eventId = eventRes.rows[0].id;
 
     // 2. Sign in to get session
     const signinRes = await fetch(`${baseUrl}/api/auth/signin`, {
@@ -51,18 +58,18 @@ test('AC-3 & AC-4: GET /api/events returns free_places and registration_id', asy
 
   try {
     // 1. Create an event and a user
-    const eventId = db.prepare('INSERT INTO events (title, date, places) VALUES (?, ?, ?)').run(
+    const eventRes = await pool.query('INSERT INTO events (title, date, places) VALUES ($1, $2, $3) RETURNING id', [
       'Event with Registrations', '2030-01-01T10:00:00Z', 10
-    ).lastInsertRowid;
+    ]);
+    const eventId = eventRes.rows[0].id;
     
-    // Alice Student (id=1) signs in
+    // Alice Student signs in
     const signinRes = await fetch(`${baseUrl}/api/auth/signin`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: 'student@club.com', password: 'password123' })
     });
     const cookie = signinRes.headers.get('set-cookie');
-    const aliceId = (await signinRes.json()).user.id;
 
     // 2. Alice registers for the event
     await fetch(`${baseUrl}/api/events/${eventId}/registrations`, {
@@ -93,9 +100,10 @@ test('AC-5 & AC-17: DELETE /api/registrations/:id cancels sign-up', async () => 
   const baseUrl = `http://localhost:${port}`;
 
   try {
-    const eventId = db.prepare('INSERT INTO events (title, date, places) VALUES (?, ?, ?)').run(
+    const eventRes = await pool.query('INSERT INTO events (title, date, places) VALUES ($1, $2, $3) RETURNING id', [
       'Cancel Event Test', '2030-01-01T10:00:00Z', 10
-    ).lastInsertRowid;
+    ]);
+    const eventId = eventRes.rows[0].id;
 
     const signinRes = await fetch(`${baseUrl}/api/auth/signin`, {
       method: 'POST',
@@ -145,9 +153,10 @@ test('AC-16: sign-up request without session gets 401 and no row is added', asyn
   const baseUrl = `http://localhost:${port}`;
 
   try {
-    const eventId = db.prepare('INSERT INTO events (title, date, places) VALUES (?, ?, ?)').run(
+    const eventRes = await pool.query('INSERT INTO events (title, date, places) VALUES ($1, $2, $3) RETURNING id', [
       'No Session Event', '2030-01-01T10:00:00Z', 10
-    ).lastInsertRowid;
+    ]);
+    const eventId = eventRes.rows[0].id;
 
     const regRes = await fetch(`${baseUrl}/api/events/${eventId}/registrations`, {
       method: 'POST',
@@ -156,7 +165,8 @@ test('AC-16: sign-up request without session gets 401 and no row is added', asyn
 
     assert.strictEqual(regRes.status, 401);
 
-    const count = db.prepare('SELECT COUNT(*) as count FROM registrations WHERE event_id = ?').get(eventId).count;
+    const countRes = await pool.query('SELECT COUNT(*) as count FROM registrations WHERE event_id = $1', [eventId]);
+    const count = parseInt(countRes.rows[0].count);
     assert.strictEqual(count, 0, 'No row should be added');
   } finally {
     server.close();
@@ -169,9 +179,10 @@ test('AC-18: second user who deletes first user registration gets 403 and row st
   const baseUrl = `http://localhost:${port}`;
 
   try {
-    const eventId = db.prepare('INSERT INTO events (title, date, places) VALUES (?, ?, ?)').run(
+    const eventRes = await pool.query('INSERT INTO events (title, date, places) VALUES ($1, $2, $3) RETURNING id', [
       'AC18 Event', '2030-01-01T10:00:00Z', 10
-    ).lastInsertRowid;
+    ]);
+    const eventId = eventRes.rows[0].id;
 
     // Sign in as User 1 (Alice)
     const signin1 = await fetch(`${baseUrl}/api/auth/signin`, {
@@ -196,12 +207,12 @@ test('AC-18: second user who deletes first user registration gets 403 and row st
 
     // Create User 2 in the test itself
     const passwordHash = bcrypt.hashSync('password123', 10);
-    db.prepare('DELETE FROM users WHERE email = ?').run('user2@club.com');
-    db.prepare('INSERT INTO users (email, password_hash, name) VALUES (?, ?, ?)').run(
+    await pool.query('DELETE FROM users WHERE email = $1', ['user2@club.com']);
+    await pool.query('INSERT INTO users (email, password_hash, name) VALUES ($1, $2, $3)', [
       'user2@club.com',
       passwordHash,
       'User Two'
-    );
+    ]);
 
     // Sign in as User 2
     const signin2 = await fetch(`${baseUrl}/api/auth/signin`, {
@@ -220,10 +231,11 @@ test('AC-18: second user who deletes first user registration gets 403 and row st
     assert.strictEqual(deleteRes.status, 403);
 
     // Verify row stays
-    const count = db.prepare('SELECT COUNT(*) as count FROM registrations WHERE id = ?').get(regId).count;
+    const countRes = await pool.query('SELECT COUNT(*) as count FROM registrations WHERE id = $1', [regId]);
+    const count = parseInt(countRes.rows[0].count);
     assert.strictEqual(count, 1, 'Registration row should stay');
 
-    db.prepare('DELETE FROM users WHERE email = ?').run('user2@club.com');
+    await pool.query('DELETE FROM users WHERE email = $1', ['user2@club.com']);
   } finally {
     server.close();
   }
@@ -262,9 +274,10 @@ test('AC-12 an event row deleted from the database no longer appears in GET /api
 
   try {
     // 1. Create an event
-    const eventId = db.prepare('INSERT INTO events (title, date, places) VALUES (?, ?, ?)').run(
+    const eventRes = await pool.query('INSERT INTO events (title, date, places) VALUES ($1, $2, $3) RETURNING id', [
       'Deleted Event Test', '2030-01-01T10:00:00Z', 10
-    ).lastInsertRowid;
+    ]);
+    const eventId = eventRes.rows[0].id;
 
     // 2. Sign in to get session cookie
     const signinRes = await fetch(`${baseUrl}/api/auth/signin`, {
@@ -282,8 +295,8 @@ test('AC-12 an event row deleted from the database no longer appears in GET /api
     const myEvent1 = events1.find(e => e.id === eventId);
     assert.ok(myEvent1, 'Event should be in the list initially');
 
-    // 4. Delete the row with db.prepare
-    db.prepare('DELETE FROM events WHERE id = ?').run(eventId);
+    // 4. Delete the row with pool.query
+    await pool.query('DELETE FROM events WHERE id = $1', [eventId]);
 
     // 5. Check that it is gone
     const eventsRes2 = await fetch(`${baseUrl}/api/events`, {

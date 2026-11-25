@@ -10,7 +10,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Ensure database and migrations are initialized
-runMigrations();
+await runMigrations();
 
 // The lectures, read once when the server starts.
 const lectures = JSON.parse(fs.readFileSync(path.join(__dirname, 'lectures.json'), 'utf8'));
@@ -67,7 +67,7 @@ function send(reply) {
 }
 
 // Decide what to answer. Return the reply, or null to answer nothing.
-function handle(msg) {
+async function handle(msg) {
   if (msg.method === 'initialize') {
     return {
       jsonrpc: '2.0',
@@ -87,7 +87,7 @@ function handle(msg) {
   }
   if (msg.method === 'tools/call') {
     const userEmail = process.env.MCP_USER_EMAIL || 'student@club.com';
-    const user = findUserByEmail(userEmail);
+    const user = await findUserByEmail(userEmail);
 
     const name = msg.params.name;
     const args = msg.params.arguments || {};
@@ -105,7 +105,7 @@ function handle(msg) {
       if (!user) {
         return textResult(msg.id, 'MCP user not found', true);
       }
-      const events = getUpcomingEvents(user.id);
+      const events = await getUpcomingEvents(user.id);
       const text = events.map(e => `ID: ${e.id}, Title: ${e.title}, Date: ${e.date}, Free Places: ${e.free_places}`).join('\n');
       return textResult(msg.id, text || 'No upcoming events', false);
     }
@@ -113,7 +113,7 @@ function handle(msg) {
       if (!user) {
         return textResult(msg.id, 'MCP user not found', true);
       }
-      const event = findEventByTitle(args.title, user.id);
+      const event = await findEventByTitle(args.title, user.id);
       if (!event) {
         return textResult(msg.id, 'Event not found: ' + args.title, true);
       }
@@ -124,7 +124,7 @@ function handle(msg) {
         return textResult(msg.id, 'MCP user not found', true);
       }
       try {
-        signUpForEvent(user.id, args.eventId);
+        await signUpForEvent(user.id, args.eventId);
         return textResult(msg.id, 'Successfully registered for event ' + args.eventId, false);
       } catch (err) {
         return textResult(msg.id, err.message, true);
@@ -142,8 +142,8 @@ function handle(msg) {
 
 const lines = readline.createInterface({ input: process.stdin });
 
-lines.on('line', (line) => {
+lines.on('line', async (line) => {
   if (!line.trim()) return;
-  const reply = handle(JSON.parse(line));
+  const reply = await handle(JSON.parse(line));
   if (reply) send(reply);
 });

@@ -1,12 +1,12 @@
-import db from '../db.js';
+import { findUserByEmail as findUserByEmailData, getUserById as getUserByIdData } from '../data/userData.js';
 import bcrypt from 'bcrypt';
 
-export function authenticateUser(email, password) {
+export async function authenticateUser(email, password) {
   if (!email || !password) {
     return { success: false, message: 'Wrong email or password' };
   }
 
-  const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+  const user = await findUserByEmailData(email);
   if (!user) {
     return { success: false, message: 'Wrong email or password' };
   }
@@ -26,12 +26,10 @@ export function authenticateUser(email, password) {
   };
 }
 
-export function getUserById(id) {
-  const user = db.prepare('SELECT id, email, name FROM users WHERE id = ?').get(id);
-  return user || null;
+export async function getUserById(id) {
+  return await getUserByIdData(id);
 }
 
-export function findUserByEmail(email) {
-  const user = db.prepare('SELECT id, email, name FROM users WHERE email = ?').get(email);
-  return user || null;
+export async function findUserByEmail(email) {
+  return await findUserByEmailData(email);
 }
