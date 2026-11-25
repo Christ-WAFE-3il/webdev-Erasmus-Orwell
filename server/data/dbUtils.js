@@ -18,3 +18,7 @@ export async function withTransaction(callback) {
 export async function query(text, params) {
   return pool.query(text, params);
 }
+
+export async function pingDb() {
+  return query('SELECT 1');
+}

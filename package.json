@@ -8,7 +8,7 @@
     "doc": "docs"
   },
   "scripts": {
-    "test": "NODE_ENV=test node --env-file-if-exists=.env --test --test-concurrency=1 server/slice1.test.js server/slice2.test.js server/slice3.test.js server/mcp.test.js server/description.test.js",
+    "test": "NODE_ENV=test node --env-file-if-exists=.env --test --test-concurrency=1 server/slice1.test.js server/slice2.test.js server/slice3.test.js server/mcp.test.js server/description.test.js server/health.test.js",
     "start": "node --env-file-if-exists=.env server/index.js",
     "mcp": "node --env-file-if-exists=.env mcp-server/server.js",
     "migrate": "node --env-file-if-exists=.env server/migrate.js"
