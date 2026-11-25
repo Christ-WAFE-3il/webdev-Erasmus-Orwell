@@ -2,15 +2,12 @@ import readline from 'node:readline';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { runMigrations } from '../server/migrate.js';
 import { findUserByEmail } from '../server/services/authService.js';
 import { getUpcomingEvents, findEventByTitle, signUpForEvent } from '../server/services/eventService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Ensure database and migrations are initialized
-await runMigrations();
 
 // The lectures, read once when the server starts.
 const lectures = JSON.parse(fs.readFileSync(path.join(__dirname, 'lectures.json'), 'utf8'));
@@ -67,6 +64,11 @@ function send(reply) {
 }
 
 // Decide what to answer. Return the reply, or null to answer nothing.
+// Looks up the MCP user in the database. Only the tools that need a user call it.
+async function getMcpUser() {
+  return findUserByEmail(process.env.MCP_USER_EMAIL || 'student@club.com');
+}
+
 async function handle(msg) {
   if (msg.method === 'initialize') {
     return {
@@ -86,8 +88,6 @@ async function handle(msg) {
     return { jsonrpc: '2.0', id: msg.id, result: { tools: tools } };
   }
   if (msg.method === 'tools/call') {
-    const userEmail = process.env.MCP_USER_EMAIL || 'student@club.com';
-    const user = await findUserByEmail(userEmail);
 
     const name = msg.params.name;
     const args = msg.params.arguments || {};
@@ -102,6 +102,7 @@ async function handle(msg) {
       return textResult(msg.id, lectures.map((l) => l.number + '. ' + l.title).join('\n'), false);
     }
     if (name === 'list_events') {
+      const user = await getMcpUser();
       if (!user) {
         return textResult(msg.id, 'MCP user not found', true);
       }
@@ -110,6 +111,7 @@ async function handle(msg) {
       return textResult(msg.id, text || 'No upcoming events', false);
     }
     if (name === 'find_event') {
+      const user = await getMcpUser();
       if (!user) {
         return textResult(msg.id, 'MCP user not found', true);
       }
@@ -120,6 +122,7 @@ async function handle(msg) {
       return textResult(msg.id, `ID: ${event.id}, Title: ${event.title}, Date: ${event.date}, Free Places: ${event.free_places}`, false);
     }
     if (name === 'register_for_event') {
+      const user = await getMcpUser();
       if (!user) {
         return textResult(msg.id, 'MCP user not found', true);
       }

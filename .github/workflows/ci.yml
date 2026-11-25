@@ -6,9 +6,16 @@ on:
   push:
   pull_request:
 
+# The tests share one Neon test database: never run two CI runs at the same time.
+concurrency:
+  group: ci-test-database
+  cancel-in-progress: false
+
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      TEST_DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
     steps:
       - uses: actions/checkout@v4
 
@@ -67,7 +74,10 @@ jobs:
   # taken, by a test that asserts nothing. Coverage finds the code nobody looked at; it
   # cannot find the code somebody looked at badly.
   coverage:
+    needs: test
     runs-on: ubuntu-latest
+    env:
+      TEST_DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
     steps:
       - uses: actions/checkout@v4
 
