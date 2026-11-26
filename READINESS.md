@@ -18,6 +18,7 @@ How I checked: I saw the slow first request in the browser (DevTools Network).
 |---|---|---|---|
 | DATABASE_URL | yes | Render dashboard (local: `.env`) | Connection to the production Neon database |
 | SESSION_SECRET | yes | Render dashboard (local: `.env`) | Secret that signs the session cookie |
+| PUBLIC_BASE_URL | no | Render dashboard (local: `.env`) | Public address of the app |
 | TEST_DATABASE_URL | tests only | local `.env` and GitHub Actions secret, never on Render | Separate Neon `test` branch, so tests never touch production data |
 | PORT | no | set by Render | Port the server listens on |
 | GEMINI_API_KEY, MODEL_NAME | no | not set on Render yet | Model feature; without them the app uses a fallback text |
@@ -25,7 +26,7 @@ How I checked: I saw the slow first request in the browser (DevTools Network).
 
 The server refuses to start if DATABASE_URL or SESSION_SECRET is missing. `.env` is not committed and not copied into the Docker image.
 
-How I checked: I started the server without these variables and it exited with "Missing environment variable(s)". I read `.gitignore` and `.dockerignore` and both list `.env`. I ran `git log` to search the history for secrets and found none.
+How I checked: on the Render Environment page I see DATABASE_URL, PUBLIC_BASE_URL and SESSION_SECRET, and no GEMINI_API_KEY. I started the server without these variables and it exited with "Missing environment variable(s)". I read `.gitignore` and `.dockerignore` and both list `.env`. I ran `git log` to search the history for secrets and found none.
 
 ## 3. What happens when things fail
 
