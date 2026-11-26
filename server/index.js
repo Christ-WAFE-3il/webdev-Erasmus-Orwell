@@ -20,7 +20,7 @@ if (process.env.NODE_ENV !== 'test') {
   }
 }
 
-initDb();
+initDb().catch((err) => console.error('Database initialisation failed:', err.message));
 
 const app = express();
 const PORT = process.env.PORT || 3000;
