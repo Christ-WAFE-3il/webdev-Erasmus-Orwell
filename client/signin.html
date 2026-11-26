@@ -2,15 +2,25 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Sign In - Club Events</title>
   <style>
-    body { font-family: sans-serif; max-width: 400px; margin: 50px auto; padding: 20px; }
-    .error { color: red; margin-bottom: 15px; }
-    .form-group { margin-bottom: 15px; }
-    label { display: block; margin-bottom: 5px; }
-    input { width: 100%; padding: 8px; box-sizing: border-box; }
-    button { padding: 10px 15px; background: #007BFF; color: white; border: none; cursor: pointer; }
-    button:hover { background: #0056b3; }
+    /* Scales: every size below comes from these variables */
+    :root {
+      --space-1: 4px; --space-2: 8px; --space-3: 16px; --space-4: 24px; --space-5: 32px;
+      --text-sm: 14px; --text-md: 16px; --text-lg: 24px;
+    }
+    body { font-family: sans-serif; font-size: var(--text-md); max-width: 400px; margin: var(--space-5) auto; padding: var(--space-3); }
+    h1 { font-size: var(--text-lg); }
+    .error { color: #b00020; margin-bottom: var(--space-3); min-height: 1.2em; }
+    .form-group { margin-bottom: var(--space-3); }
+    label { display: block; margin-bottom: var(--space-1); }
+    /* Touch targets: at least 44 pixels high */
+    input { width: 100%; min-height: 44px; padding: var(--space-2); box-sizing: border-box; font-size: var(--text-md); }
+    button { min-height: 44px; min-width: 44px; padding: var(--space-2) var(--space-3); background: #0056b3; color: #fff; border: none; cursor: pointer; font-size: var(--text-md); }
+    button:hover { background: #004085; }
+    /* Visible keyboard focus */
+    :focus-visible { outline: 3px solid #005fcc; outline-offset: 2px; }
   </style>
 </head>
 <body>

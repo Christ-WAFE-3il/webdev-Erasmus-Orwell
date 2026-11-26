@@ -2,18 +2,47 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Upcoming Events - Club Events</title>
   <style>
-    body { font-family: sans-serif; max-width: 800px; margin: 30px auto; padding: 20px; }
-    header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ccc; padding-bottom: 10px; margin-bottom: 20px; }
-    .event-card { border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; }
-    .error-banner { background: #f8d7da; color: #721c24; padding: 10px; margin-bottom: 15px; border-radius: 4px; border: 1px solid #f5c6cb; }
-    button { padding: 8px 15px; cursor: pointer; border: none; border-radius: 4px; font-weight: bold; }
-    .btn-signup { background: #28a745; color: white; }
-    .btn-signup:hover { background: #218838; }
-    .btn-cancel { background: #dc3545; color: white; }
+    /* Scales: every size below comes from these variables */
+    :root {
+      --space-1: 4px; --space-2: 8px; --space-3: 16px; --space-4: 24px; --space-5: 32px;
+      --text-sm: 14px; --text-md: 16px; --text-lg: 24px;
+      --border: #ddd;
+    }
+    body { font-family: sans-serif; font-size: var(--text-md); max-width: 800px; margin: var(--space-5) auto; padding: var(--space-3); }
+    header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-2); border-bottom: 1px solid var(--border); padding-bottom: var(--space-2); margin-bottom: var(--space-4); }
+    h1 { font-size: var(--text-lg); margin: 0; }
+    /* Reserve space so the page does not jump when the events arrive */
+    #events-list { min-height: 280px; }
+    .event-card { border: 1px solid var(--border); padding: var(--space-3); margin-bottom: var(--space-2); border-radius: 5px; display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); }
+    .error-banner { background: #f8d7da; color: #721c24; padding: var(--space-2); margin-bottom: var(--space-3); border-radius: 4px; border: 1px solid #f5c6cb; }
+    /* Touch targets: at least 44 x 44 pixels */
+    button { min-height: 44px; min-width: 44px; padding: var(--space-2) var(--space-3); cursor: pointer; border: none; border-radius: 4px; font-weight: bold; font-size: var(--text-md); }
+    /* Darker colours: white text needs a contrast of at least 4.5:1 */
+    .btn-signup { background: #1e7e34; color: #fff; }
+    .btn-signup:hover { background: #19692c; }
+    .btn-cancel { background: #dc3545; color: #fff; }
     .btn-cancel:hover { background: #c82333; }
+    .btn-secondary { margin-left: var(--space-2); background: #6c757d; color: #fff; }
     .full-label { font-weight: bold; color: #dc3545; }
+    /* Visible keyboard focus */
+    :focus-visible { outline: 3px solid #005fcc; outline-offset: 2px; }
+    /* Model feature */
+    #suggest-section { margin-top: var(--space-5); border-top: 1px solid var(--border); padding-top: var(--space-3); }
+    #suggest-section label { display: block; margin-bottom: var(--space-1); }
+    #suggest-section input { width: 100%; min-height: 44px; padding: var(--space-2); box-sizing: border-box; margin-bottom: var(--space-3); font-size: var(--text-md); }
+    #suggest-btn { background: #0056b3; color: #fff; }
+    #suggest-btn:disabled { background: #6c757d; cursor: wait; }
+    #suggest-status { margin-top: var(--space-2); color: #495057; }
+    .suggestion { border-left: 4px solid #6c757d; padding-left: var(--space-3); font-style: italic; }
+    .suggestion-label { font-size: var(--text-sm); color: #495057; margin-bottom: var(--space-1); }
+    /* Small screens: cards go in a column */
+    @media (max-width: 600px) {
+      body { margin: var(--space-3) auto; }
+      .event-card { flex-direction: column; align-items: flex-start; }
+    }
   </style>
 </head>
 <body>
@@ -21,13 +50,24 @@
     <h1>Upcoming Events</h1>
     <div>
       <span id="user-name">Loading...</span>
-      <button id="signout-btn" style="margin-left: 10px; padding: 5px 10px; background: #6c757d; color: white;">Sign Out</button>
+      <button id="signout-btn" class="btn-secondary">Sign Out</button>
     </div>
   </header>
 
   <main>
     <div id="error-container"></div>
     <div id="events-list">Loading events...</div>
+
+    <section id="suggest-section">
+      <h2>Suggest an event description</h2>
+      <label for="suggest-title">Event title</label>
+      <input id="suggest-title" type="text" maxlength="100">
+      <label for="suggest-keywords">Keywords (optional)</label>
+      <input id="suggest-keywords" type="text" maxlength="200">
+      <button id="suggest-btn" type="button">Suggest a description</button>
+      <div id="suggest-status" role="status" aria-live="polite"></div>
+      <div id="suggest-result"></div>
+    </section>
   </main>
 
   <script>
@@ -157,6 +197,47 @@
     function escapeHtml(str) {
       return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
+
+    async function suggestDescription() {
+      const title = document.getElementById('suggest-title').value.trim();
+      const keywords = document.getElementById('suggest-keywords').value.trim();
+      const btn = document.getElementById('suggest-btn');
+      const status = document.getElementById('suggest-status');
+      const result = document.getElementById('suggest-result');
+      result.textContent = '';
+      if (!title) {
+        status.textContent = 'Please type an event title first.';
+        return;
+      }
+      // State "thinking": the button is blocked and the user is told to wait
+      btn.disabled = true;
+      status.textContent = 'Thinking... this can take a few seconds.';
+      try {
+        const res = await fetch('/api/events/suggest-description', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title, keywords })
+        });
+        if (!res.ok) throw new Error('bad status');
+        const data = await res.json();
+        status.textContent = '';
+        // The text is labelled as a suggestion, and set with textContent (never as HTML)
+        const label = document.createElement('p');
+        label.className = 'suggestion-label';
+        label.textContent = 'Suggestion written by an AI model. It is not a fact: check it before you use it.';
+        const text = document.createElement('p');
+        text.className = 'suggestion';
+        text.textContent = data.text;
+        result.append(label, text);
+      } catch (err) {
+        // State "failed": a readable sentence, and the rest of the page keeps working
+        status.textContent = 'The suggestion failed. You can try again; the rest of the page still works.';
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    document.getElementById('suggest-btn').addEventListener('click', suggestDescription);
 
     checkAuthAndLoadEvents();
   </script>

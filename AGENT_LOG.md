@@ -88,3 +88,19 @@ Changed in review: the first plan used DELETE /api/events/:id/sign-up, so the 40
 - Checkpoints: plan review with five changes (injected client, key in a header, 422 on bad input, fallback cut to 300 characters, tests first); grep for key= and console in the service; the provider named in one file only; npm test count after each step.
 - Went wrong: the new test file was not in npm test until I added it; the timeout timer is probably never cleared, so the tests take longer.
 - Changed by hand: added description.test.js to the test script.
+## 2026-11-26 · Exercise 4: deployment and readiness
+- Goal: put the Club Events app on Render with a Neon Postgres database, with /health, an error handler, a Docker image, a CI that gates coverage, and READINESS.md.
+- Autonomy: Gemini CLI worked alone inside one step; I read each diff and ran the tests before every commit. Claude (the chat assistant) guided me step by step and reviewed the plans.
+- Delegated: Gemini CLI: the move from SQLite to Postgres (db.js, a data layer in server/data/, async services, migrations), /health, the 404 and error handler, the Dockerfile, ci.yml, the tests. Claude: the CSS and the model-feature screen in client/index.html (applied by scripts I ran), and the text of READINESS.md and docs/UI.md.
+- Checkpoints: plan review before any code; npm test (40 tests) and git diff before every commit; a separate Neon branch for the tests; curl on the live site (/health, bad JSON, 404, the 403/401/404 ownership test with a second account); breaking the database on purpose; a rollback on Render; a search of the git history for secrets; node checks/ex4.mjs at 34/34.
+- Went wrong (agent claims that were false or weak):
+  - Its plan ran the tests on the production database. I made it use a second Neon branch (TEST_DATABASE_URL) and refuse to start if it equals DATABASE_URL.
+  - It used TIMESTAMPTZ for dates, although the app stores text dates; it also set ssl rejectUnauthorized:false, which turns off certificate checks. I changed the type to TEXT and removed the option.
+  - db.js threw an error when the module was imported; COUNT(*) came back as a string; an unhandled initDb rejection crashed the container with a bad database URL.
+  - The test for AC-18 (forbidden branch) passed without ever reaching the Forbidden error, so it proved nothing; the mocks in the description tests leaked between tests and its assertions were weak. I had them rewritten with mock.method and an afterEach restore.
+  - The MCP job in CI would have failed without a database, because the server looked the user up at startup; I had the lookup moved into a function called only by the tools that need it.
+  - Quota errors many times: I used /clear, one file per prompt, another model, and waited.
+  - Mistakes of mine and of the assistant: a real key and a session secret were visible in screenshots or chat, so I regenerated the secret and will delete the exposed API keys; the first security test used a wrong route (/api/auth/login gives 404; the real one is /api/auth/signin).
+- Changed by hand: I fixed the ci.yml indentation; I re-enabled Auto-Deploy after the rollback; I decided the Neon branches and the environment variables; I copied my screenshots into docs/ui/.
+- Not written by me: the render-modes table in SPEC.md (section Architecture) and the texts of READINESS.md and docs/UI.md were drafted by Claude from the grep and curl output I pasted, and I pasted them in. I checked the results myself (curl, DevTools, keyboard test, contrast script).
+- Usage: I did not run /stats at the end of the Gemini sessions of this exercise, and when I ran it later the counters were at 0 because it was a new session. So the tokens of these sessions are marked "not recorded" in USAGE.md. I did not invent numbers.

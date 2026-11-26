@@ -67,6 +67,13 @@ Server
 
 Mismatch: the service writes SQL itself instead of calling a separate data layer, although AGENTS.md says only the data layer writes SQL. I left it because the project is small and the service needs the SQL inside its transaction.
 
+### Render modes
+
+| Screen | Render mode | Where the HTML is built | How I know |
+|---|---|---|---|
+| Sign-in (`client/signin.html`) | static HTML | in the file itself | There is no innerHTML or createElement in signin.html. The only fetch (line 40) just sends the sign-in form to the server. |
+| Events list (`client/index.html`) | client-rendered | in the browser | index.html calls fetch('/api/auth/me') (line 57), then fetch('/api/events') (line 77), then builds the list with innerHTML (line 91). DevTools Network shows the same order. |
+
 ## Acceptance criteria
 <!-- Every criterion carries an id. A test proves it by naming that id in its title, for example
      test('AC-3 a booking that overlaps another is refused with 409', ...).
