@@ -53,13 +53,13 @@ test('AC-10: getUserById and findUserByEmail retrieve user correctly', async () 
 test('AC-9 & AC-3: upcoming events can be retrieved ordered by date', async () => {
   const events = await getUpcomingEvents(null);
   assert.ok(events.length > 0);
-  assert.strictEqual(events[0].title, 'Python Workshop');
+  assert.strictEqual(events[0].title, 'Python Workshop BROKEN');
 });
 
 test('AC-3: findEventByTitle retrieves event by title', async () => {
-  const event = await findEventByTitle('Python Workshop', null);
+  const event = await findEventByTitle('Python Workshop BROKEN', null);
   assert.ok(event);
-  assert.strictEqual(event.title, 'Python Workshop');
+  assert.strictEqual(event.title, 'Python Workshop BROKEN');
 });
 
 test('AC-19: cancelRegistration for non-existent event throws NotFoundError', async () => {
